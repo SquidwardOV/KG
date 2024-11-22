@@ -1,24 +1,24 @@
 import tkinter as tk
 from math import cos, sin, radians
 
-# Класс для представления трехмерного вектора
-class Vec3:
+# Класс для трехмерных векторов
+class Vector3D:
     def __init__(self, x, y, z):
         self.x = x
         self.y = y
         self.z = z
 
-    # Операции сложения
+    # Сложение векторов
     def __add__(self, other):
-        return Vec3(self.x + other.x, self.y + other.y, self.z + other.z)
+        return Vector3D(self.x + other.x, self.y + other.y, self.z + other.z)
 
-    # Операции вычитания
+    # Вычитание векторов
     def __sub__(self, other):
-        return Vec3(self.x - other.x, self.y - other.y, self.z - other.z)
+        return Vector3D(self.x - other.x, self.y - other.y, self.z - other.z)
 
-    # Умножение на скаляр
+    # Умножение вектора на скаляр
     def __mul__(self, scalar):
-        return Vec3(self.x * scalar, self.y * scalar, self.z * scalar)
+        return Vector3D(self.x * scalar, self.y * scalar, self.z * scalar)
 
     # Скалярное произведение
     def dot(self, other):
@@ -26,244 +26,289 @@ class Vec3:
 
     # Векторное произведение
     def cross(self, other):
-        return Vec3(
+        return Vector3D(
             self.y * other.z - self.z * other.y,
             self.z * other.x - self.x * other.z,
             self.x * other.y - self.y * other.x
         )
 
-    # Нормализация
+    # Нормализация вектора
     def normalize(self):
-        magnitude = (self.x**2 + self.y**2 + self.z**2) ** 0.5
-        if magnitude == 0:
-            return Vec3(0, 0, 0)
-        return Vec3(self.x / magnitude, self.y / magnitude, self.z / magnitude)
+        length = (self.x**2 + self.y**2 + self.z**2) ** 0.5
+        if length == 0:
+            return Vector3D(0, 0, 0)
+        return Vector3D(self.x / length, self.y / length, self.z / length)
 
-    # Преобразование в список для матричных операций
+    # Преобразование вектора в список
     def to_list(self):
         return [self.x, self.y, self.z, 1]
 
-# Класс для 4x4 матрицы
-class Mat4x4:
-    def __init__(self, matrix):
-        self.matrix = matrix  # Матрица 4x4
+# Класс для 4x4 матриц
+class Matrix4x4:
+    def __init__(self, data):
+        self.data = data  # data - двумерный список 4x4
 
-    # Перегрузка оператора @ для умножения матриц
+    # Умножение матрицы на матрицу
     def __matmul__(self, other):
         result = [[0]*4 for _ in range(4)]
         for i in range(4):
             for j in range(4):
                 for k in range(4):
-                    result[i][j] += self.matrix[i][k] * other.matrix[k][j]
-        return Mat4x4(result)
+                    result[i][j] += self.data[i][k] * other.data[k][j]
+        return Matrix4x4(result)
 
-    # Преобразование вектора с помощью матрицы
-    def apply(self, vec):
-        transformed = [0]*4
-        v = vec.to_list()
+    # Умножение матрицы на вектор
+    def transform_vector(self, vec):
+        res = [0]*4
+        vec_list = vec.to_list()
         for i in range(4):
             for j in range(4):
-                transformed[i] += self.matrix[i][j] * v[j]
-        if transformed[3] != 0:
-            return Vec3(transformed[0]/transformed[3], transformed[1]/transformed[3], transformed[2]/transformed[3])
-        return Vec3(transformed[0], transformed[1], transformed[2])
+                res[i] += self.data[i][j] * vec_list[j]
+        # Нормализация координаты w
+        if res[3] != 0:
+            return Vector3D(res[0]/res[3], res[1]/res[3], res[2]/res[3])
+        else:
+            return Vector3D(res[0], res[1], res[2])
 
-# Функции для создания трансформационных матриц
-def create_translation(dx, dy, dz):
-    return Mat4x4([
+# Функции для создания матриц преобразований
+def translation_matrix(dx, dy, dz):
+    return Matrix4x4([
         [1, 0, 0, dx],
         [0, 1, 0, dy],
         [0, 0, 1, dz],
         [0, 0, 0, 1]
     ])
 
-def create_scaling(sx, sy, sz):
-    return Mat4x4([
+def scaling_matrix(sx, sy, sz):
+    return Matrix4x4([
         [sx, 0,  0,  0],
         [0,  sy, 0,  0],
         [0,  0,  sz, 0],
         [0,  0,  0,  1]
     ])
 
-def create_rotation_x(degrees):
-    rad = radians(degrees)
-    return Mat4x4([
+def rotation_matrix_x(angle):
+    angle = radians(angle)
+    return Matrix4x4([
         [1, 0,          0,         0],
-        [0, cos(rad), -sin(rad), 0],
-        [0, sin(rad), cos(rad),  0],
+        [0, cos(angle), -sin(angle), 0],
+        [0, sin(angle), cos(angle),  0],
         [0, 0,          0,         1]
     ])
 
-def create_rotation_y(degrees):
-    rad = radians(degrees)
-    return Mat4x4([
-        [cos(rad),  0, sin(rad), 0],
-        [0,         1, 0,        0],
-        [-sin(rad), 0, cos(rad), 0],
-        [0,         0, 0,        1]
+def rotation_matrix_y(angle):
+    angle = radians(angle)
+    return Matrix4x4([
+        [cos(angle),  0, sin(angle), 0],
+        [0,           1, 0,          0],
+        [-sin(angle), 0, cos(angle), 0],
+        [0,           0, 0,          1]
     ])
 
-def create_rotation_z(degrees):
-    rad = radians(degrees)
-    return Mat4x4([
-        [cos(rad), -sin(rad), 0, 0],
-        [sin(rad), cos(rad),  0, 0],
-        [0,        0,         1, 0],
-        [0,        0,         0, 1]
+def rotation_matrix_z(angle):
+    angle = radians(angle)
+    return Matrix4x4([
+        [cos(angle), -sin(angle), 0, 0],
+        [sin(angle), cos(angle),  0, 0],
+        [0,          0,           1, 0],
+        [0,          0,           0, 1]
     ])
 
 # Класс камеры
 class Camera:
-    def __init__(self, pos, tilt_x=0, tilt_y=0, tilt_z=0, screen_dist=1):
-        self.position = pos
-        self.tilt_x = tilt_x
-        self.tilt_y = tilt_y
-        self.tilt_z = tilt_z
-        self.screen_distance = screen_dist
-        self.view_mat = None
+    def __init__(self, position, tilt_x=0, tilt_y=0, tilt_z=0, screen_distance=1):
+        self.position = position
+        self.tilt_x = tilt_x  # Угол наклона по оси X
+        self.tilt_y = tilt_y  # Угол наклона по оси Y
+        self.tilt_z = tilt_z  # Угол наклона по оси Z
+        self.screen_distance = screen_distance
         self.update_view_matrix()
 
     def update_view_matrix(self):
-        rot_x = create_rotation_x(self.tilt_x)
-        rot_y = create_rotation_y(self.tilt_y)
-        rot_z = create_rotation_z(self.tilt_z)
-        rotation = rot_z @ rot_y @ rot_x
-        translation = create_translation(-self.position.x, -self.position.y, -self.position.z)
-        self.view_mat = rotation @ translation
+        # Создаем матрицы поворота
+        rx = rotation_matrix_x(self.tilt_x)
+        ry = rotation_matrix_y(self.tilt_y)
+        rz = rotation_matrix_z(self.tilt_z)
+        # Последовательное применение поворотов
+        rotation = rz @ ry @ rx
+        # Создаем матрицу переноса камеры
+        translation = translation_matrix(-self.position.x, -self.position.y, -self.position.z)
+        # Полная матрица вида
+        self.view_matrix = rotation @ translation
 
-    def set_orientation(self, tilt_x, tilt_y, tilt_z):
+    def set_tilt(self, tilt_x, tilt_y, tilt_z):
         self.tilt_x = tilt_x
         self.tilt_y = tilt_y
         self.tilt_z = tilt_z
         self.update_view_matrix()
 
-    def project(self, vertex):
-        transformed = self.view_mat.apply(vertex)
+    # Проекция точки на экран
+    def project_vertex(self, vertex):
+        # Применяем матрицу вида к вершине
+        transformed = self.view_matrix.transform_vector(vertex)
+        # Простая перспективная проекция
         if transformed.z == 0:
             return None
-        scale = self.screen_distance / transformed.z
-        x_proj = transformed.x * scale
-        y_proj = transformed.y * scale
-        return (x_proj, y_proj)
+        factor = self.screen_distance / transformed.z
+        x = transformed.x * factor
+        y = transformed.y * factor
+        return (x, y)
 
 # Класс модели
 class Model:
-    def __init__(self, vert_file, face_file):
-        self.vertices = []
-        self.faces = []
-        self.load_vertices(vert_file)
-        self.load_faces(face_file)
-        self.normalize()
+    def __init__(self, vertices_file, faces_file):
+        self.vertices = []  # Список Vector3D
+        self.faces = []     # Список кортежей с индексами вершин
+        self.load_vertices(vertices_file)
+        self.load_faces(faces_file)
+        self.normalize_vertices()
 
-    def load_vertices(self, filepath):
-        with open(filepath, 'r') as f:
+    def load_vertices(self, filename):
+        with open(filename, 'r') as f:
             for line in f:
                 parts = line.strip().split()
                 if len(parts) < 3:
                     continue
-                x, y, z = map(float, parts[:3])
-                self.vertices.append(Vec3(x, y, z))
+                x_str, y_str, z_str = parts[:3]
+                x, y, z = float(x_str), float(y_str), float(z_str)
+                self.vertices.append(Vector3D(x, y, z))
 
-    def load_faces(self, filepath):
-        with open(filepath, 'r') as f:
+    def load_faces(self, filename):
+        with open(filename, 'r') as f:
             for line in f:
                 indices = tuple(map(int, line.strip().split()))
                 if len(indices) < 2:
                     continue
                 self.faces.append(indices)
 
-    def normalize(self):
-        max_val = max(max(abs(v.x), abs(v.y), abs(v.z)) for v in self.vertices)
-        if max_val == 0:
+    def normalize_vertices(self):
+        # Нормализация координат
+        max_coord = max(
+            max(abs(vertex.x), abs(vertex.y), abs(vertex.z)) for vertex in self.vertices
+        )
+        if max_coord == 0:
             return
-        for v in self.vertices:
-            v.x /= max_val
-            v.y /= max_val
-            v.z /= max_val
+        for vertex in self.vertices:
+            vertex.x /= max_coord
+            vertex.y /= max_coord
+            vertex.z /= max_coord
 
-    def transform(self, mat):
-        self.vertices = [mat.apply(v) for v in self.vertices]
+    def apply_transformation(self, matrix):
+        transformed_vertices = []
+        for vertex in self.vertices:
+            transformed_vertex = matrix.transform_vector(vertex)
+            transformed_vertices.append(transformed_vertex)
+        self.vertices = transformed_vertices
 
-# Класс сцены для визуализации
-class SceneViewer:
+# Класс сцены
+class Scene:
     def __init__(self, model, camera):
         self.model = model
         self.camera = camera
-        self.root = tk.Tk()
-        self.root.title("3D Model Viewer")
-        self.canvas_width = 800
-        self.canvas_height = 600
-        self.canvas = tk.Canvas(self.root, width=self.canvas_width, height=self.canvas_height, bg="white")
-        self.canvas.pack()
-        self.center = (self.canvas_width // 2, self.canvas_height // 2)
-        self.create_controls()
-        self.draw_model()
 
-    def create_controls(self):
-        control_frame = tk.Frame(self.root)
-        control_frame.pack(pady=10)
+    def render(self):
+        # Создаем окно для отображения
+        window = tk.Tk()
+        window.title("3D Model Visualization")
+        canvas_width = 800
+        canvas_height = 600
+        canvas = tk.Canvas(window, width=canvas_width, height=canvas_height, bg="white")
+        canvas.pack()
 
-        # Наклон по X
-        tk.Label(control_frame, text="Поворот по X:").grid(row=0, column=0, padx=5)
-        self.angle_x = tk.DoubleVar(value=self.camera.tilt_x)
-        tk.Entry(control_frame, textvariable=self.angle_x, width=10).grid(row=0, column=1, padx=5)
+        # Центр экрана
+        center_x = canvas_width // 2
+        center_y = canvas_height // 2
 
-        # Наклон по Y
-        tk.Label(control_frame, text="Поворот по Y:").grid(row=1, column=0, padx=5)
-        self.angle_y = tk.DoubleVar(value=self.camera.tilt_y)
-        tk.Entry(control_frame, textvariable=self.angle_y, width=10).grid(row=1, column=1, padx=5)
-
-        # Наклон по Z
-        tk.Label(control_frame, text="Поворот по Z:").grid(row=2, column=0, padx=5)
-        self.angle_z = tk.DoubleVar(value=self.camera.tilt_z)
-        tk.Entry(control_frame, textvariable=self.angle_z, width=10).grid(row=2, column=1, padx=5)
-
-        # Кнопка применения наклона
-        apply_btn = tk.Button(control_frame, text="Применить", command=self.update_view)
-        apply_btn.grid(row=3, column=0, columnspan=2, pady=5)
-
-    def project_point(self, point):
-        proj = self.camera.project(point)
-        if proj is None:
-            return None
-        x, y = proj
-        screen_x = self.center[0] + x * 100
-        screen_y = self.center[1] - y * 100  # Инверсия Y для экранных координат
-        return (screen_x, screen_y)
-
-    def draw_model(self):
+        # Проецируем и отрисовываем каждую грань модели
         for face in self.model.faces:
-            projected = []
-            for idx in face:
-                if 0 <= idx < len(self.model.vertices):
-                    p = self.project_point(self.model.vertices[idx])
-                    if p:
-                        projected.append(p)
-            if len(projected) >= 2:
-                for i in range(len(projected)):
-                    start = projected[i]
-                    end = projected[(i + 1) % len(projected)]
-                    self.canvas.create_line(start[0], start[1], end[0], end[1], fill="black")
+            points = []
+            for vertex_index in face:
+                if vertex_index < 0 or vertex_index >= len(self.model.vertices):
+                    continue
+                vertex = self.model.vertices[vertex_index]
+                screen_coords = self.camera.project_vertex(vertex)
+                if screen_coords:
+                    # Масштабирование и сдвиг в центр экрана
+                    x_screen = center_x + screen_coords[0] * 100
+                    y_screen = center_y - screen_coords[1] * 100  # Инвертируем Y для экранных координат
+                    points.append((x_screen, y_screen))
+            if len(points) >= 2:
+                # Отрисовываем ребра грани
+                for i in range(len(points)):
+                    x1, y1 = points[i]
+                    x2, y2 = points[(i + 1) % len(points)]
+                    canvas.create_line(
+                        x1, y1,
+                        x2, y2,
+                        fill="black"
+                    )
 
-    def update_view(self):
-        # Обновление ориентации камеры
-        self.camera.set_orientation(self.angle_x.get(), self.angle_y.get(), self.angle_z.get())
-        # Очистка канваса и перерисовка модели
-        self.canvas.delete("all")
-        self.draw_model()
+        # Функция для обновления сцены при изменении параметров камеры
+        def update_scene():
+            # Очистка канваса
+            canvas.delete("all")
+            # Повторная отрисовка
+            for face in self.model.faces:
+                points = []
+                for vertex_index in face:
+                    if vertex_index < 0 or vertex_index >= len(self.model.vertices):
+                        continue
+                    vertex = self.model.vertices[vertex_index]
+                    screen_coords = self.camera.project_vertex(vertex)
+                    if screen_coords:
+                        x_screen = center_x + screen_coords[0] * 100
+                        y_screen = center_y - screen_coords[1] * 100
+                        points.append((x_screen, y_screen))
+                if len(points) >= 2:
+                    for i in range(len(points)):
+                        x1, y1 = points[i]
+                        x2, y2 = points[(i + 1) % len(points)]
+                        canvas.create_line(
+                            x1, y1,
+                            x2, y2,
+                            fill="black"
+                        )
 
-    def run(self):
-        self.root.mainloop()
+        # Интерфейс для изменения наклона камеры
+        control_frame = tk.Frame(window)
+        control_frame.pack()
 
-# Основной блок выполнения
+        tk.Label(control_frame, text="Наклон X:").grid(row=0, column=0)
+        tilt_x_var = tk.DoubleVar(value=self.camera.tilt_x)
+        tilt_x_entry = tk.Entry(control_frame, textvariable=tilt_x_var)
+        tilt_x_entry.grid(row=0, column=1)
+
+        tk.Label(control_frame, text="Наклон Y:").grid(row=1, column=0)
+        tilt_y_var = tk.DoubleVar(value=self.camera.tilt_y)
+        tilt_y_entry = tk.Entry(control_frame, textvariable=tilt_y_var)
+        tilt_y_entry.grid(row=1, column=1)
+
+        tk.Label(control_frame, text="Наклон Z:").grid(row=2, column=0)
+        tilt_z_var = tk.DoubleVar(value=self.camera.tilt_z)
+        tilt_z_entry = tk.Entry(control_frame, textvariable=tilt_z_var)
+        tilt_z_entry.grid(row=2, column=1)
+
+        def apply_tilt():
+            tilt_x = tilt_x_var.get()
+            tilt_y = tilt_y_var.get()
+            tilt_z = tilt_z_var.get()
+            self.camera.set_tilt(tilt_x, tilt_y, tilt_z)
+            update_scene()
+
+        apply_button = tk.Button(control_frame, text="Применить наклон", command=apply_tilt)
+        apply_button.grid(row=3, column=0, columnspan=2)
+
+        window.mainloop()
+
+# Пример использования
 if __name__ == "__main__":
-    # Загрузка модели из файлов
-    модель = Model("vertices_cube.txt", "faces_cube.txt")
+    # Создаем модель из файлов
+    model = Model("vertices_pyramide.txt", "faces_pyramide.txt")
 
-    # Настройка камеры
-    позиция_камеры = Vec3(1, 0, -5)
-    камера = Camera(pos=позиция_камеры, tilt_x=0, tilt_y=0, tilt_z=0, screen_dist=1)
+    # Параметры камеры
+    camera_position = Vector3D(0, 0, -5)
+    camera = Camera(position=camera_position, tilt_x=0, tilt_y=0, tilt_z=0, screen_distance=1)
 
-    # Создание и запуск визуализатора сцены
-    визуализатор = SceneViewer(модель, камера)
-    визуализатор.run()
+    # Создаем и отображаем сцену
+    scene = Scene(model, camera)
+    scene.render()
